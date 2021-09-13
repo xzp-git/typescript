@@ -1,73 +1,93 @@
-/**
- * interface 描述对象的形状和结构,可以给数据增添类型 而且方便复用
- * 
- * type 的方式 通过别名来重新定义类型
- * 
- * interface 可以被类实现 和继承  type没有这个功能
- * type 可以使用联合类型,interface 不能使用联合类型
- */
+//泛型的用处在于 当我们调用的时候 确定类型 而不是一开始就写好类型，类型不确定，只有在执行的时候才能确定
 
-let school = {
-  name: 'foo',
-  age: 24
-}
-type schools = Array<typeof school>;
-function aa(school: schools) {
-}
-aa([{ name: 'foo', age: 24 }]);
+//1.单个泛型 声明的时候 需要用 <> 包裹起来 传值的时候也需要
 
-// 1) 如何用接口描述对象类型, 如果有联合类型 就使用type
-
-// interface IObj{
-//   name:string
-//   age:number
+// function createArray<T>(times:number, value:T):T[] {
+//   let result = []
+//   for(let i = 0; i < times; i++){
+//     result.push(value)
+//   }
+//   return result
 // }
+// let r = createArray(5,'aav')
 
-type IObj = { name: string, age: number } | string
-
-const getObj = (obj: IObj) => { }
-getObj({ name: 'foo', age: 24 })
-getObj('aaaa')
-
-// 2)描述函数类型
-interface ISum {
-  (a: string, b: string): string
+interface IMyArr<T>{
+  [key:number]:T
 }
 
-// type ISum = (a:string, b:string) => string
-
-const sum: ISum = (a, b) => {
-  return a + b
+interface ICreateArray<K>{
+  //interface后面的 类型和函数前面的类型的区别，如果放在函数前面 表示使用函数的时候确定了类型放在接口的后面表示时使用接口的时候确定类型
+  <T>(x:K, y:T):IMyArr<T>
 }
 
-// 3)计数器的例子  每次调用函数就累加1
-
-interface ICount { //接口中的混合类型
-  (): number
-  count: number
-}
-
-const fn: ICount = (() => {
-  return ++fn.count
-}) as ICount
-fn.count = 0;
-console.log(fn());
-console.log(fn());
-console.log(fn());
-
-interface IEffect {
-  (): void
-  id: number
-}
-function effect(fn: Function) {
-    const reactiveEffect = createReactiveEffect(fn);
-    return reactiveEffect
-}
-
-function createReactiveEffect(fn: Function) {
-  const effect: IEffect = function reactiveEffect() {
-
+const createArray:ICreateArray<number> = (times,value) => {
+  let result = []
+  for(let i = 0; i < times; i++){
+    result.push(value)
   }
-  effect.id = 1;
-  return effect
+  return result
 }
+createArray(3, 'aaa')
+
+//2. 多个泛型 元组进行类型交换
+
+const swap = <T, K>(tuple: [T, K]):[K, T] => {
+  return [tuple[1], tuple[0]]
+}
+
+let r = swap([123, 'sss00'])
+
+//约束对象
+ const sum = <T extends string>(a: T, b: T):T => {
+   return (a + b ) as T
+ }
+ sum('a', 'v')
+
+ //3. 泛型约束 主要强调类型中必须包含某个属性
+ type withLen = {length: number}
+ const computeArrayLength = <T extends withLen, K extends withLen>(arr1:T, arr2:K):number => {
+   return arr1.length + arr2.length
+ }
+
+ computeArrayLength('123', {length:3})
+
+ const getVal = <T extends object, K extends keyof T>(obj: T, key: K) => {
+   if (typeof obj !== 'object') {
+     return 
+   }
+   return obj[key]
+ }
+
+ type T1 = keyof{a:1, b:2}
+ type T2 = keyof string
+ type T3 = keyof any //string | number | symbol
+
+ getVal({a:1}, 'a')
+
+//泛型可以给类来使用
+
+class GetArrayMax<T = number>{
+  public arr:T[] = []
+  add(val:T){
+    this.arr.push(val)
+  }
+  getMax():T{
+    let arr = this.arr
+    let max = arr[0];
+    for (let i = 1; i < arr.length; i++) {
+        arr[i] > max ? max = arr[i] : null
+    }
+    return max;
+  }
+}
+let arr = new GetArrayMax(); // 泛型只有当使用后才知道具体的类型
+arr.add(1);
+arr.add(2)
+arr.add(3)
+let r1 = arr.getMax()
+
+// 泛型可以在 函数 类 （接口、别名） 中使用 
+
+// extends 约束  keyof 取当前类型的key  typeof 取当前值的类型
+
+export { }
