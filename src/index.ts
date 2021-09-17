@@ -1,93 +1,97 @@
-//泛型的用处在于 当我们调用的时候 确定类型 而不是一开始就写好类型，类型不确定，只有在执行的时候才能确定
+//ts的概念 装包和拆包
 
-//1.单个泛型 声明的时候 需要用 <> 包裹起来 传值的时候也需要
-
-// function createArray<T>(times:number, value:T):T[] {
-//   let result = []
-//   for(let i = 0; i < times; i++){
-//     result.push(value)
-//   }
-//   return result
-// }
-// let r = createArray(5,'aav')
-
-interface IMyArr<T>{
-  [key:number]:T
+let data = {
+  name:'age',
+  age:12
 }
 
-interface ICreateArray<K>{
-  //interface后面的 类型和函数前面的类型的区别，如果放在函数前面 表示使用函数的时候确定了类型放在接口的后面表示时使用接口的时候确定类型
-  <T>(x:K, y:T):IMyArr<T>
+type Proxy<T> = { //它可以复用
+  get():T,
+  set(value:any):void
+}
+type Proxify<T extends object> = {
+  [K in keyof T]:Proxy<T[K]>
 }
 
-const createArray:ICreateArray<number> = (times,value) => {
-  let result = []
-  for(let i = 0; i < times; i++){
-    result.push(value)
+function proxify<T extends object>(obj:T):Proxify<T> {
+  let result ={} as Proxify<T>
+  for(let key in obj){
+    let value = obj[key]
+    result[key] = {
+      get(){
+        return value
+      },
+      set(newValue){
+        value = newValue
+      }
+    }
   }
   return result
 }
-createArray(3, 'aaa')
+let proxyDatas = proxify(data);
 
-//2. 多个泛型 元组进行类型交换
+proxyDatas.name.set
+proxyDatas.name.get
 
-const swap = <T, K>(tuple: [T, K]):[K, T] => {
-  return [tuple[1], tuple[0]]
-}
-
-let r = swap([123, 'sss00'])
-
-//约束对象
- const sum = <T extends string>(a: T, b: T):T => {
-   return (a + b ) as T
- }
- sum('a', 'v')
-
- //3. 泛型约束 主要强调类型中必须包含某个属性
- type withLen = {length: number}
- const computeArrayLength = <T extends withLen, K extends withLen>(arr1:T, arr2:K):number => {
-   return arr1.length + arr2.length
- }
-
- computeArrayLength('123', {length:3})
-
- const getVal = <T extends object, K extends keyof T>(obj: T, key: K) => {
-   if (typeof obj !== 'object') {
-     return 
-   }
-   return obj[key]
- }
-
- type T1 = keyof{a:1, b:2}
- type T2 = keyof string
- type T3 = keyof any //string | number | symbol
-
- getVal({a:1}, 'a')
-
-//泛型可以给类来使用
-
-class GetArrayMax<T = number>{
-  public arr:T[] = []
-  add(val:T){
-    this.arr.push(val)
-  }
-  getMax():T{
-    let arr = this.arr
-    let max = arr[0];
-    for (let i = 1; i < arr.length; i++) {
-        arr[i] > max ? max = arr[i] : null
+function unProxify<T extends object>(obj: Proxify<T>):T {
+    let result = {} as T
+    for(let key in obj){
+      let value = obj[key]
+      result[key] = value.get()
     }
-    return max;
-  }
+    return result
 }
-let arr = new GetArrayMax(); // 泛型只有当使用后才知道具体的类型
-arr.add(1);
-arr.add(2)
-arr.add(3)
-let r1 = arr.getMax()
 
-// 泛型可以在 函数 类 （接口、别名） 中使用 
+let data2 = unProxify(proxyDatas)
 
-// extends 约束  keyof 取当前类型的key  typeof 取当前值的类型
 
-export { }
+let person1 = {
+  name: 'zs',
+  age: 23,
+  address: 'bj'
+}
+let person2: {
+  address: 'sh'
+}
+// 差集 获取两个类型的差集 Exclude 在一群类型中忽略掉某个类型 和 Omit 对象中忽略
+type Diff<T extends object, K extends object> = Omit<T, keyof K>
+type myDiff = Diff<typeof person1, typeof person2>
+
+//交集 不是交叉类型 从一个对象中 挑取某个类型 Extract
+type Inter<T extends object, K extends object>= Pick<K, Extract<keyof T, keyof K>>
+
+type myInter = Inter<typeof person1, typeof person2>
+
+// 两个对象合并的问题 T & K = 会有可能导致属性是never的问题
+
+type Person1 = {
+  name:string
+  age:number
+}
+
+type Person2 = {
+  age:string
+  address:string
+  a:string
+  b:number
+}
+// 两个类型合并 两个对象的合并 一般都是以后者为准，如果person1  里面有的 person2没有在进行添加
+
+//1.需要拿到多余的肯定是要的
+//2.公告的以后面的为准
+//Diff<K, T> 拿到的是 person2中多的
+type Merge<T extends object, K extends object> = Diff<T, K> & Diff<K, T> & Inter<T,K>
+type Compute<T> = { [K in keyof T]: Compute<T[K]> }; //将类型展开方便提示
+type myMerge = Compute<Merge<Person1, Person2>>;
+
+//我直接在T里面 忽略掉K里面的， 只剩下T中独有的 +K
+
+type Merge1<T extends object, K extends object> = Omit<T, keyof K> & K
+
+
+//核心方法  Omit Extract Exclude  typeof  keyof  in  extends 
+
+
+
+
+export {}
